@@ -1,0 +1,5 @@
+exo_CTL_08.01.csv
+data/raw/
+*.fits
+__pycache__/
+.venv/
