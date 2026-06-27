@@ -1,0 +1,4 @@
+tic_id,periodic_dip_found,classification,confidence,period_days,depth_ppm,duration_hours,sde,odd_even_mismatch
+259377017,True,candidate,99.1,5.6875,2121.3,1.04,14.39,
+261136679,True,transit,50.5,6.2675,154.8,2.22,22.13,1.8
+150428135,False,candidate,97.5,13.466,1444.4,1.22,5.48,2.39

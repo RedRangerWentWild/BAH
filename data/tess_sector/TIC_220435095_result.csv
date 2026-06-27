@@ -1,0 +1,2 @@
+tic_id,true_disposition,periodic_dip_found,classification,confidence,period_days,depth_ppm,duration_hours,sde
+220435095,FP,False,candidate,99.2,8.7645,1362.2,16.35,6.46

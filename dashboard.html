@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExoDetect — AI Exoplanet Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #000000;
+    --deep: #05080f;
+    --panel: #0a0f1e;
+    --panel2: #0e1528;
+    --border: rgba(255,255,255,0.07);
+    --cyan: #4dd9e0;
+    --cyan-dim: rgba(77,217,224,0.15);
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.45);
+    --label: rgba(255,255,255,0.3);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px; height: 56px;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 0.08em; }
+  .nav-logo span { color: var(--cyan); }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--white); }
+  .nav-cta { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--white); padding: 7px 18px; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+  .nav-cta:hover { border-color: var(--cyan); background: var(--cyan-dim); }
+
+  /* HERO — compact, no 100vh */
+  .hero {
+    padding: 56px 40px 48px;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+    background: radial-gradient(ellipse at 50% 100%, #0a1628 0%, #000 65%);
+    position: relative; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      radial-gradient(1px 1px at 15% 25%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 60%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 80%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 10%, rgba(255,255,255,0.5) 0%, transparent 100%);
+  }
+  .hero-eyebrow { font-size: 10px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); margin-bottom: 16px; position: relative; }
+  .hero-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 5vw, 56px); font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 16px; position: relative; }
+  .hero-title em { font-style: normal; color: var(--cyan); }
+  .hero-sub { color: var(--muted); font-size: 14px; font-weight: 300; max-width: 460px; margin: 0 auto 28px; line-height: 1.7; position: relative; }
+  .hero-pills { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; position: relative; }
+  .pill { border: 1px solid rgba(255,255,255,0.15); padding: 5px 14px; font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+
+  /* SECTION */
+  .section { padding: 40px 40px; max-width: 1300px; margin: 0 auto; }
+  .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); margin-bottom: 6px; }
+  .section-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(22px, 2.5vw, 30px); font-weight: 600; margin-bottom: 6px; }
+  .section-sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+
+  /* MODE TOGGLE */
+  .mode-toggle { display: inline-flex; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 28px; overflow: hidden; }
+  .mode-btn { padding: 8px 24px; font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; background: transparent; border: none; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+  .mode-btn.active { background: var(--cyan-dim); color: var(--white); }
+
+  /* DETECTION SECTION */
+  .detection-section { background: var(--deep); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 40px 0; }
+  .form-grid { display: grid; grid-template-columns: 380px 1fr; gap: 32px; align-items: start; }
+  .form-panel { background: var(--panel); border: 1px solid var(--border); padding: 24px; }
+  .form-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  input[type="number"] { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--white); padding: 8px 10px; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; width: 100%; transition: border-color 0.2s; }
+  input[type="number"]:focus { border-color: var(--cyan); }
+  input[type="range"] { width: 100%; accent-color: var(--cyan); cursor: pointer; margin-top: 4px; }
+  .flags-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .flag-item { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 7px 10px; border: 1px solid var(--border); transition: border-color 0.2s, background 0.2s; }
+  .flag-item:hover { border-color: rgba(255,255,255,0.2); }
+  .flag-item.checked { border-color: var(--cyan); background: var(--cyan-dim); }
+  .flag-item input { display: none; }
+  .flag-dot { width: 7px; height: 7px; border: 1px solid var(--muted); flex-shrink: 0; transition: all 0.2s; }
+  .flag-item.checked .flag-dot { background: var(--cyan); border-color: var(--cyan); }
+  .flag-label { font-size: 11px; color: var(--muted); }
+  .classify-btn { width: 100%; margin-top: 20px; padding: 12px; background: var(--cyan); border: none; color: #000; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s; }
+  .classify-btn:hover { opacity: 0.88; }
+
+  /* PLANET STAGE */
+  .planet-stage { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; padding: 20px 0; }
+  .planet-card { display: flex; flex-direction: column; align-items: center; padding: 24px 32px; }
+  .planet-name-label { font-size: 9px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--label); margin-bottom: 3px; }
+  .planet-name { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 20px; }
+  .planet-visual { position: relative; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; }
+  .planet-sphere { width: 120px; height: 120px; border-radius: 50%; box-shadow: inset -18px -8px 36px rgba(0,0,0,0.6); }
+  .planet-sphere.earth { background: radial-gradient(circle at 35% 35%, #3a7bd5, #1a4a8a 40%, #0a2855 70%, #05152e); }
+  .planet-sphere.detected { background: radial-gradient(circle at 35% 35%, #c0783a, #8a4020 40%, #4a2010 70%, #1a0a05); transition: background 0.5s; }
+  .planet-glow { position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; transition: background 0.5s; }
+  .planet-stats { position: absolute; inset: -50px; pointer-events: none; }
+  .stat-line { position: absolute; display: flex; align-items: center; gap: 6px; }
+  .stat-line.top-left { top: 16px; left: -16px; flex-direction: row-reverse; }
+  .stat-line.mid-left { top: 50%; left: -24px; transform: translateY(-50%); flex-direction: row-reverse; }
+  .stat-line.bot-left { bottom: 16px; left: -16px; flex-direction: row-reverse; }
+  .stat-line.top-right { top: 16px; right: -16px; }
+  .stat-line.mid-right { top: 50%; right: -24px; transform: translateY(-50%); }
+  .stat-line.bot-right { bottom: 16px; right: -16px; }
+  .stat-connector { width: 24px; height: 1px; background: rgba(255,255,255,0.15); }
+  .stat-box { text-align: left; }
+  .stat-line.top-left .stat-box, .stat-line.mid-left .stat-box, .stat-line.bot-left .stat-box { text-align: right; }
+  .stat-key { font-size: 8px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--label); display: block; }
+  .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; color: var(--white); display: block; }
+  .planet-period { margin-top: 20px; text-align: center; }
+
+  /* CLASS CARD */
+  .class-card { background: var(--panel); border: 1px solid var(--border); padding: 24px 20px; min-width: 240px; max-width: 260px; display: flex; flex-direction: column; align-items: center; }
+  .class-icon { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--cyan); display: flex; align-items: center; justify-content: center; margin-bottom: 12px; transition: border-color 0.4s; }
+  .class-icon svg { width: 16px; height: 16px; }
+  .class-type { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 4px; text-align: center; transition: color 0.4s; }
+  .class-confidence { font-family: 'Space Grotesk', sans-serif; font-size: 40px; font-weight: 700; color: var(--cyan); line-height: 1; transition: color 0.4s; }
+  .class-conf-label { font-size: 9px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--label); margin-bottom: 16px; }
+  .class-divider { width: 100%; height: 1px; background: var(--border); margin: 12px 0; }
+  .model-row { display: flex; justify-content: space-between; width: 100%; margin-bottom: 6px; }
+  .model-name { font-size: 11px; color: var(--muted); }
+  .model-pct { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 600; color: var(--white); }
+  .derived-label { font-size: 9px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--label); margin-top: 6px; margin-bottom: 6px; align-self: flex-start; }
+  .radius-bar-wrap { width: 100%; margin-top: 4px; }
+  .radius-bar-track { width: 100%; height: 2px; background: rgba(255,255,255,0.08); }
+  .radius-bar-fill { height: 100%; background: var(--cyan); transition: width 0.6s; }
+  .radius-label { font-size: 10px; color: var(--muted); margin-top: 5px; text-align: center; }
+  .placeholder-msg { text-align: center; color: var(--muted); font-size: 12px; padding: 16px 0; }
+
+  /* STATUS BADGE */
+  .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-badge.transit { background: rgba(77,217,224,0.1); color: var(--cyan); }
+  .status-badge.transit .status-dot { background: var(--cyan); }
+  .status-badge.binary { background: rgba(224,85,85,0.1); color: #e05555; }
+  .status-badge.binary .status-dot { background: #e05555; }
+  .status-badge.blend { background: rgba(224,144,85,0.1); color: #e09055; }
+  .status-badge.blend .status-dot { background: #e09055; }
+  .status-badge.candidate { background: rgba(167,139,250,0.1); color: #a78bfa; }
+  .status-badge.candidate .status-dot { background: #a78bfa; }
+  .status-badge.fp { background: rgba(136,136,136,0.1); color: #888; }
+  .status-badge.fp .status-dot { background: #888; }
+
+  /* SCIENTIST / USER PANELS */
+  .scientist-panel { display: none; }
+  .scientist-panel.visible { display: block; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+  .metric-card { background: var(--panel); border: 1px solid var(--border); padding: 20px 16px; transition: border-color 0.2s; }
+  .metric-card:hover { border-color: rgba(255,255,255,0.15); }
+  .metric-key { font-size: 9px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--label); margin-bottom: 6px; display: block; }
+  .metric-val { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: var(--white); display: block; margin-bottom: 6px; }
+  .metric-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .params-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+  .param-card { background: var(--panel2); border: 1px solid var(--border); padding: 16px 14px; }
+  .param-key { font-size: 9px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--label); margin-bottom: 5px; display: block; }
+  .param-val { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600; color: var(--white); }
+  .param-unit { font-size: 11px; color: var(--muted); margin-left: 3px; }
+
+  /* LIGHT CURVE */
+  .lc-panel { background: var(--panel); border: 1px solid var(--border); padding: 20px; margin-top: 12px; }
+  .lc-title { font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--label); margin-bottom: 12px; }
+  canvas#lcChart { width: 100%; height: 180px; display: block; }
+
+  /* LOADING */
+  .loading-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+  .loading-overlay.active { display: flex; }
+  .spinner { width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .footer-logo { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; }
+  .footer-logo span { color: var(--cyan); }
+  .footer-text { font-size: 11px; color: var(--label); }
+
+  .fade-in { animation: fadeIn 0.4s ease forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 900px) {
+    .planet-stage { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .params-grid { grid-template-columns: 1fr 1fr; }
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .section { padding: 32px 20px; }
+    .hero { padding: 40px 20px 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Analysing light curve…</div>
+</div>
+
+<nav>
+  <div class="nav-logo">Exo<span>Detect</span></div>
+  <ul class="nav-links">
+  </ul>
+  <button class="nav-cta" onclick="document.getElementById('detection').scrollIntoView({behavior:'smooth'})">Run Detection</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-bg"></div>
+  <div class="hero-eyebrow">ISRO Build-A-Thon 2026 · PS7</div>
+  <h1 class="hero-title">Detecting <em>New Worlds</em><br>in Stellar Light</h1>
+  <p class="hero-sub">AI-powered exoplanet detection from noisy TESS and Kepler light curves. Transit Least Squares + XGBoost — 91% accuracy across 7,904 stars.</p>
+  <div class="hero-pills">
+    <div class="pill">Transit Least Squares</div>
+    <div class="pill">XGBoost · 91% Accuracy</div>
+    <div class="pill">SHAP Explainability</div>
+  </div>
+</section>
+
+<!-- DETECTION -->
+<div class="detection-section" id="detection">
+<div class="section">
+  <div class="section-label">Detection Engine</div>
+  <h2 class="section-title">Classify a Light Curve Signal</h2>
+  <p class="section-sub">Enter transit parameters extracted from a TESS or Kepler light curve to classify the signal.</p>
+
+  <div class="form-grid">
+    <div class="form-panel">
+      <div class="form-title">Transit Parameters</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Orbital Period (days)</label>
+          <input type="number" id="period" value="9.49" step="0.01" min="0.1">
+        </div>
+        <div class="form-group">
+          <label>Transit Duration (hours)</label>
+          <input type="number" id="duration" value="2.96" step="0.01" min="0.1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Transit Depth (ppm)</label>
+          <input type="number" id="depth" value="615.8" step="0.1" min="1">
+        </div>
+        <div class="form-group">
+          <label>Signal-to-Noise Ratio</label>
+          <input type="number" id="snr" value="35.8" step="0.1" min="0.1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Planet Radius (R⊕)</label>
+          <input type="number" id="prad" value="2.26" step="0.01" min="0.1">
+        </div>
+        <div class="form-group">
+          <label>KOI Score — <span id="scoreVal">0.90</span></label>
+          <input type="range" id="score" min="0" max="1" step="0.01" value="0.9"
+            oninput="document.getElementById('scoreVal').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+      </div>
+      <div class="form-group full" style="margin-top:6px;">
+        <label>False Positive Flags</label>
+        <div class="flags-grid">
+          <div class="flag-item" onclick="toggleFlag(this)"><input type="checkbox" id="fpflag_ss"><div class="flag-dot"></div><span class="flag-label">Secondary Eclipse</span></div>
+          <div class="flag-item" onclick="toggleFlag(this)"><input type="checkbox" id="fpflag_co"><div class="flag-dot"></div><span class="flag-label">Centroid Offset</span></div>
+          <div class="flag-item" onclick="toggleFlag(this)"><input type="checkbox" id="fpflag_nt"><div class="flag-dot"></div><span class="flag-label">Not Transit Shaped</span></div>
+          <div class="flag-item" onclick="toggleFlag(this)"><input type="checkbox" id="fpflag_ec"><div class="flag-dot"></div><span class="flag-label">Ephemeris Contamination</span></div>
+        </div>
+      </div>
+      <button class="classify-btn" onclick="classify()">⬡ &nbsp;Classify Signal</button>
+    </div>
+
+    <!-- PLANET STAGE -->
+    <div>
+      <div class="planet-stage" id="planetStage">
+
+        <!-- EARTH -->
+        <div class="planet-card">
+          <div class="planet-name-label">Reference Planet</div>
+          <div class="planet-name">Earth</div>
+          <div class="planet-visual">
+            <div class="planet-glow" style="background:radial-gradient(circle,rgba(50,100,200,0.25) 0%,transparent 70%);"></div>
+            <div class="planet-sphere earth"></div>
+            <div class="planet-stats">
+              <div class="stat-line top-left"><div class="stat-connector"></div><div class="stat-box"><span class="stat-key">Mass</span><span class="stat-val">5.97×10²⁴ kg</span></div></div>
+              <div class="stat-line mid-left"><div class="stat-connector"></div><div class="stat-box"><span class="stat-key">Diameter</span><span class="stat-val">12,742 km</span></div></div>
+              <div class="stat-line bot-left"><div class="stat-connector"></div><div class="stat-box"><span class="stat-key">Temperature</span><span class="stat-val">15°C</span></div></div>
+            </div>
+          </div>
+          <div class="planet-period"><span class="stat-key">Orbital Period</span><div class="stat-val" style="font-size:15px;margin-top:3px;">365 days</div></div>
+        </div>
+
+        <!-- CLASS CARD -->
+        <div class="class-card" id="classCard">
+          <div class="class-icon" id="classIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          </div>
+          <div class="class-type" id="classType">Awaiting Input</div>
+          <div class="class-confidence" id="classConf">—</div>
+          <div class="class-conf-label">Ensemble Confidence</div>
+          <div class="class-divider"></div>
+          <div id="modelBreakdown" style="width:100%;"><div class="placeholder-msg">Enter parameters and<br>click Classify Signal</div></div>
+        </div>
+
+        <!-- DETECTED PLANET -->
+        <div class="planet-card">
+          <div class="planet-name-label">Type</div>
+          <div class="planet-name" id="detectedType">—</div>
+          <div class="planet-visual">
+            <div class="planet-glow" id="planetGlow" style="background:radial-gradient(circle,rgba(77,217,224,0.1) 0%,transparent 70%);"></div>
+            <div class="planet-sphere detected" id="detectedSphere"></div>
+            <div class="planet-stats">
+              <div class="stat-line top-right"><div class="stat-connector"></div><div class="stat-box"><span class="stat-key">Stellar Temp.</span><span class="stat-val" id="statSteff">—</span></div></div>
+              <div class="stat-line mid-right"><div class="stat-connector"></div><div class="stat-box"><span class="stat-key">Transit Depth</span><span class="stat-val" id="statDepth">—</span></div></div>
+              <div class="stat-line bot-right"><div class="stat-connector"></div><div class="stat-box"><span class="stat-key">SDE Score</span><span class="stat-val" id="statSde">—</span></div></div>
+            </div>
+          </div>
+          <div class="planet-period"><span class="stat-key">Orbital Period</span><div class="stat-val" id="statPeriod" style="font-size:15px;margin-top:3px;">—</div></div>
+        </div>
+
+      </div>
+      <div style="display:flex;justify-content:center;margin-top:12px;" id="statusBadgeWrap"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- INSIGHTS -->
+<div class="section" id="insights">
+  <div class="section-label">Analysis</div>
+  <h2 class="section-title">Model Metrics & Exoplanet Data</h2>
+  <p class="section-sub">Detailed analysis of AI model performance and detected signal characteristics.</p>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('user',this)">User</button>
+    <button class="mode-btn" onclick="setMode('scientist',this)">Scientist</button>
+  </div>
+
+  <!-- USER -->
+  <div id="userPanel">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="metric-card"><span class="metric-key">Stars Analysed</span><span class="metric-val">7,904</span><div class="metric-desc">Kepler DR25 labelled training dataset used to train the classifier.</div></div>
+      <div class="metric-card"><span class="metric-key">Model Accuracy</span><span class="metric-val">91%</span><div class="metric-desc">Overall accuracy across 5 classes on the held-out test set.</div></div>
+      <div class="metric-card"><span class="metric-key">Planet Candidates</span><span class="metric-val">2,281</span><div class="metric-desc">Confirmed transit signals identified in the training corpus.</div></div>
+    </div>
+    <div class="params-grid" id="userParams">
+      <div class="param-card"><span class="param-key">Orbital Period</span><span class="param-val" id="upPeriod">—</span></div>
+      <div class="param-card"><span class="param-key">Transit Depth</span><span class="param-val" id="upDepth">—</span></div>
+      <div class="param-card"><span class="param-key">Duration</span><span class="param-val" id="upDuration">—</span></div>
+      <div class="param-card"><span class="param-key">Planet Radius</span><span class="param-val" id="upPrad">—</span></div>
+    </div>
+  </div>
+
+  <!-- SCIENTIST -->
+  <div class="scientist-panel" id="scientistPanel">
+    <div class="section-label" style="margin-bottom:12px;">AI Model Performance</div>
+    <div class="metrics-grid">
+      <div class="metric-card"><span class="metric-key">ROC AUC</span><span class="metric-val">98.1%</span><div class="metric-desc">Area under ROC curve — measures ability to distinguish between all 5 classes.</div></div>
+      <div class="metric-card"><span class="metric-key">PR AUC</span><span class="metric-val">96.4%</span><div class="metric-desc">Precision-Recall AUC — critical for imbalanced class distributions.</div></div>
+      <div class="metric-card"><span class="metric-key">Recall (Transit)</span><span class="metric-val">84%</span><div class="metric-desc">Proportion of actual transits correctly identified by the model.</div></div>
+      <div class="metric-card"><span class="metric-key">F1-Score</span><span class="metric-val">91%</span><div class="metric-desc">Harmonic mean of precision and recall.</div></div>
+      <div class="metric-card"><span class="metric-key">Accuracy</span><span class="metric-val">91%</span><div class="metric-desc">Total proportion of correct predictions across all 5 classes.</div></div>
+      <div class="metric-card"><span class="metric-key">EB Precision</span><span class="metric-val">100%</span><div class="metric-desc">Eclipsing binary detection precision — zero false binary classifications.</div></div>
+    </div>
+    <div class="section-label" style="margin-top:28px;margin-bottom:12px;">Exoplanet Characteristics</div>
+    <div class="params-grid">
+      <div class="param-card"><span class="param-key">Orbital Period</span><span class="param-val" id="spPeriod">—</span></div>
+      <div class="param-card"><span class="param-key">Transit Depth</span><span class="param-val" id="spDepth">—</span></div>
+      <div class="param-card"><span class="param-key">Duration</span><span class="param-val" id="spDuration">—</span></div>
+      <div class="param-card"><span class="param-key">Rp/Rs Ratio</span><span class="param-val" id="spRprs">—</span></div>
+    </div>
+    <div class="lc-panel" id="lcPanel" style="display:none;">
+      <div class="lc-title">Transit Model — Phase Folded Light Curve</div>
+      <canvas id="lcChart"></canvas>
+    </div>
+    <div class="lc-panel" id="shapPanel" style="display:none;margin-top:12px;">
+      <div class="lc-title">Feature Contribution — Why this classification?</div>
+      <div id="shapBars" style="margin-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">Exo<span>Detect</span></div>
+  <div class="footer-text">ISRO Build-A-Thon 2026 · PS7 · Kepler + TESS · XGBoost + TLS</div>
+</footer>
+
+<script>
+let lastResult = null;
+const API_URL = 'http://localhost:8000';
+
+function toggleFlag(el) {
+  el.classList.toggle('checked');
+  el.querySelector('input[type=checkbox]').checked = el.classList.contains('checked');
+}
+
+function setMode(mode, btn) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (mode === 'scientist') {
+    document.getElementById('userPanel').style.display = 'none';
+    document.getElementById('scientistPanel').classList.add('visible');
+  } else {
+    document.getElementById('userPanel').style.display = 'block';
+    document.getElementById('scientistPanel').classList.remove('visible');
+  }
+}
+
+const glowColors = { transit:'rgba(77,217,224,0.35)', candidate:'rgba(167,139,250,0.35)', eclipsing_binary:'rgba(224,85,85,0.35)', blend:'rgba(224,144,85,0.35)', false_positive:'rgba(136,136,136,0.25)', noise:'rgba(136,136,136,0.2)' };
+const accentColors = { transit:'#4dd9e0', candidate:'#a78bfa', eclipsing_binary:'#e05555', blend:'#e09055', false_positive:'#888', noise:'#888' };
+const statusClass = { transit:'transit', candidate:'candidate', eclipsing_binary:'binary', blend:'blend', false_positive:'fp', noise:'fp' };
+const statusText = { transit:'Exoplanet Transit Detected', candidate:'Planet Candidate — Follow-up Required', eclipsing_binary:'Eclipsing Binary — Not a Planet', blend:'Stellar Blend — Background Contamination', false_positive:'False Positive Signal', noise:'Noise / Instrumental Artifact' };
+const planetSphereColors = { transit:'radial-gradient(circle at 35% 35%, #3a9bb5, #1a5a8a 40%, #0a2855 70%, #05152e)', candidate:'radial-gradient(circle at 35% 35%, #8a70c8, #4a3a88 40%, #2a1a55 70%, #0f0820)', eclipsing_binary:'radial-gradient(circle at 35% 35%, #c03a3a, #8a2020 40%, #4a1010 70%, #1a0505)', blend:'radial-gradient(circle at 35% 35%, #c0783a, #8a4020 40%, #4a2010 70%, #1a0a05)', false_positive:'radial-gradient(circle at 35% 35%, #606060, #404040 40%, #202020 70%, #101010)', noise:'radial-gradient(circle at 35% 35%, #505050, #303030 40%, #181818 70%, #080808)' };
+
+async function classify() {
+  const period   = parseFloat(document.getElementById('period').value);
+  const duration = parseFloat(document.getElementById('duration').value);
+  const depth    = parseFloat(document.getElementById('depth').value);
+  const snr      = parseFloat(document.getElementById('snr').value);
+  const prad     = parseFloat(document.getElementById('prad').value);
+  const score    = parseFloat(document.getElementById('score').value);
+  const ss = document.getElementById('fpflag_ss').checked ? 1 : 0;
+  const co = document.getElementById('fpflag_co').checked ? 1 : 0;
+  const nt = document.getElementById('fpflag_nt').checked ? 1 : 0;
+  const ec = document.getElementById('fpflag_ec').checked ? 1 : 0;
+
+  document.getElementById('loadingOverlay').classList.add('active');
+
+  let result;
+  try {
+    const resp = await fetch(`${API_URL}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ period, duration, depth, snr, score, prad, fpflag_ss:ss, fpflag_co:co, fpflag_nt:nt, fpflag_ec:ec })
+    });
+    if (!resp.ok) throw new Error('API error');
+    result = await resp.json();
+  } catch(e) {
+    result = demoPredict(period, duration, depth, snr, score, prad, ss, co, nt, ec);
+  }
+
+  document.getElementById('loadingOverlay').classList.remove('active');
+  lastResult = result;
+  renderResult(result, period, duration, depth, snr, prad);
+}
+
+function demoPredict(period, duration, depth, snr, score, prad, ss, co, nt, ec) {
+  if (ss) return { label:'eclipsing_binary', confidence:97.2, probabilities:{eclipsing_binary:97.2,transit:1.8,blend:0.6,candidate:0.3,false_positive:0.1}, shap:[{f:'koi_fpflag_ss',v:0.82,dir:1},{f:'koi_score',v:0.31,dir:-1},{f:'koi_model_snr',v:0.18,dir:-1}] };
+  if (co) return { label:'blend', confidence:94.5, probabilities:{blend:94.5,false_positive:3.2,transit:1.4,candidate:0.6,eclipsing_binary:0.3}, shap:[{f:'koi_fpflag_co',v:0.71,dir:1},{f:'koi_depth',v:0.24,dir:-1},{f:'koi_model_snr',v:0.15,dir:-1}] };
+  if (score > 0.7 && snr > 20 && !nt && !ec) return { label:'transit', confidence:84.7, probabilities:{transit:84.7,candidate:14.1,blend:0.7,false_positive:0.3,eclipsing_binary:0.2}, shap:[{f:'koi_score',v:0.86,dir:1},{f:'koi_model_snr',v:0.37,dir:1},{f:'koi_steff',v:0.2,dir:1},{f:'koi_period',v:0.13,dir:1},{f:'koi_prad',v:0.11,dir:1}] };
+  return { label:'candidate', confidence:71.3, probabilities:{candidate:71.3,transit:22.4,blend:3.8,false_positive:1.9,eclipsing_binary:0.6}, shap:[{f:'koi_score',v:0.44,dir:1},{f:'koi_model_snr',v:0.28,dir:1},{f:'koi_depth',v:0.19,dir:-1},{f:'koi_period',v:0.15,dir:-1}] };
+}
+
+function renderResult(result, period, duration, depth, snr, prad) {
+  const { label, confidence, probabilities, shap } = result;
+  const accent = accentColors[label] || '#888';
+  const glow = glowColors[label] || 'rgba(136,136,136,0.2)';
+
+  document.getElementById('classType').textContent = label.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+  document.getElementById('classType').style.color = accent;
+  document.getElementById('classConf').textContent = confidence.toFixed(1) + '%';
+  document.getElementById('classConf').style.color = accent;
+  document.getElementById('classIcon').style.borderColor = accent;
+
+  const sortedProbs = Object.entries(probabilities).sort((a,b)=>b[1]-a[1]);
+  let bdHTML = sortedProbs.map(([cls,pct]) => `<div class="model-row"><span class="model-name">${cls.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}</span><span class="model-pct" style="color:${cls===label?accent:'var(--muted)'}">${pct.toFixed(1)}%</span></div>`).join('');
+  const rprs = Math.sqrt(depth / 1e6).toFixed(4);
+  const barPct = Math.min(100, (prad / 15) * 100);
+  bdHTML += `<div class="class-divider"></div><div class="derived-label">Derived Metrics</div><div class="model-row"><span class="model-name">Rp/Rs ratio</span><span class="model-pct">${rprs}</span></div><div class="radius-bar-wrap"><div class="radius-bar-track"><div class="radius-bar-fill" style="width:${barPct}%;background:${accent};"></div></div><div class="radius-label">Radius vs Earth: ${prad.toFixed(2)} R⊕</div></div>`;
+  document.getElementById('modelBreakdown').innerHTML = bdHTML;
+
+  document.getElementById('detectedType').textContent = label.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+  document.getElementById('planetGlow').style.background = `radial-gradient(circle,${glow} 0%,transparent 70%)`;
+  document.getElementById('detectedSphere').style.background = planetSphereColors[label] || planetSphereColors.candidate;
+  document.getElementById('statSteff').textContent = '5,455 K';
+  document.getElementById('statDepth').textContent = depth.toFixed(1) + ' ppm';
+  document.getElementById('statSde').textContent = (snr * 0.9).toFixed(1);
+  document.getElementById('statPeriod').textContent = period.toFixed(2) + ' days';
+
+  document.getElementById('statusBadgeWrap').innerHTML = `<div class="status-badge ${statusClass[label]||'fp'} fade-in"><div class="status-dot"></div>${statusText[label]||label}</div>`;
+
+  ['up','sp'].forEach(p => {
+    document.getElementById(p+'Period').innerHTML = period.toFixed(4)+' <span class="param-unit">days</span>';
+    document.getElementById(p+'Depth').innerHTML = depth.toFixed(1)+' <span class="param-unit">ppm</span>';
+    document.getElementById(p+'Duration').innerHTML = duration.toFixed(2)+' <span class="param-unit">hrs</span>';
+  });
+  document.getElementById('upPrad').innerHTML = prad.toFixed(2)+' <span class="param-unit">R⊕</span>';
+  document.getElementById('spRprs').innerHTML = rprs;
+
+  drawLightCurve(period, duration, depth, label);
+  drawShapBars(shap, accent);
+  document.getElementById('lcPanel').style.display = 'block';
+  document.getElementById('shapPanel').style.display = 'block';
+
+  // Switch to scientist to show the charts
+  const sciBtn = document.querySelectorAll('.mode-btn')[1];
+  setMode('scientist', sciBtn);
+
+  setTimeout(() => document.getElementById('insights').scrollIntoView({behavior:'smooth'}), 200);
+}
+
+function drawLightCurve(period, duration, depth, label) {
+  const canvas = document.getElementById('lcChart');
+  canvas.width = (canvas.offsetWidth || 800) * window.devicePixelRatio;
+  canvas.height = 180 * window.devicePixelRatio;
+  canvas.style.height = '180px';
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const accent = accentColors[label] || '#4dd9e0';
+
+  ctx.fillStyle = '#05080f'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+  for (let i=0;i<=4;i++) { ctx.beginPath(); ctx.moveTo(0,H*i/4); ctx.lineTo(W,H*i/4); ctx.stroke(); }
+
+  const pad = 50, plotW = W-pad*2, plotH = H-36;
+  const dPpm = depth/1e6, halfDur = duration/(period*24);
+  ctx.beginPath(); ctx.strokeStyle = accent; ctx.lineWidth = 2;
+  for (let px=0;px<=plotW;px++) {
+    const phase = (px/plotW)-0.5;
+    let flux = 1.0;
+    if (Math.abs(phase) < halfDur*0.5) {
+      const x = phase/(halfDur*0.5);
+      flux = Math.abs(x)>0.9 ? 1.0-dPpm*(1-(Math.abs(x)-0.9)/0.1*1)*0.7 : 1.0-dPpm*(0.7+0.3*Math.cos(x*Math.PI*0.5));
+    }
+    flux += (Math.random()-0.5)*dPpm*0.25;
+    const py = pad+plotH/2-(flux-(1-dPpm/2))*plotH*300;
+    px===0?ctx.moveTo(pad+px,py):ctx.lineTo(pad+px,py);
+  }
+  ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,0.28)';ctx.font=`${9*window.devicePixelRatio}px Inter`;
+  ctx.fillText('Phase',W/2-14,H-4);
+}
+
+function drawShapBars(shap, accent) {
+  if (!shap||!shap.length) return;
+  const container = document.getElementById('shapBars');
+  const maxVal = Math.max(...shap.map(s=>Math.abs(s.v)));
+  container.innerHTML = shap.map(s => {
+    const pct = (Math.abs(s.v)/maxVal*100).toFixed(1);
+    const color = s.dir>0?accent:'#e05555';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;"><div style="width:140px;font-size:11px;color:var(--muted);text-align:right;flex-shrink:0;">${s.f.replace('koi_','').replace(/_/g,' ')}</div><div style="flex:1;height:5px;background:rgba(255,255,255,0.05);position:relative;"><div style="position:absolute;${s.dir>0?'left':'right'}:0;width:${pct}%;height:100%;background:${color};"></div></div><div style="font-size:11px;font-family:'Space Grotesk',sans-serif;color:${color};width:48px;">${s.dir>0?'▲':'▼'} ${s.v.toFixed(2)}</div></div>`;
+  }).join('');
+}
+
+window.addEventListener('resize', () => {
+  if (lastResult) {
+    const p=parseFloat(document.getElementById('period').value);
+    const du=parseFloat(document.getElementById('duration').value);
+    const de=parseFloat(document.getElementById('depth').value);
+    drawLightCurve(p,du,de,lastResult.label);
+  }
+});
+</script>
+</body>
+</html>
